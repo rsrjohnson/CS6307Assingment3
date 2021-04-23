@@ -37,7 +37,7 @@ df_PR.show()
 
 # COMMAND ----------
 
-new_PR=df_PR.groupBy("dst").agg((c1+c2*sum("quotient")).alias("PR"))
+new_PR=df_PR.groupBy("dst").agg((0.15/831+0.85*sum("quotient")).alias("PR"))
 display(new_PR.orderBy(col("PR").desc()).take(10))
 
 # COMMAND ----------
@@ -91,5 +91,115 @@ display(new_PR.orderBy(col("PR").desc()).take(10))
 
 #Comparing Results
 ranks=airportGraph.pageRank(0.15,maxIter=20)
-display(ranks.vertices.orderBy(col("pagerank")).select("id", "pagerank"))
 
+
+
+# COMMAND ----------
+
+display(ranks.vertices.orderBy(col("pagerank")).take(10))
+
+# COMMAND ----------
+
+# Part 2
+
+from pyspark.ml import Pipeline
+from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.feature import HashingTF, Tokenizer
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+from pyspark.ml.feature import StringIndexer
+from pyspark.ml.feature import StopWordsRemover
+
+
+
+from pyspark.mllib.classification import LogisticRegressionWithLBFGS
+from pyspark.mllib.util import MLUtils
+from pyspark.mllib.evaluation import MulticlassMetrics
+from pyspark.mllib.evaluation import MultilabelMetrics
+
+#val ratings = spark.read.option("header","true").option("inferSchema","true").option("delimiter",";").csv("YourPath")
+
+
+#Loading the data
+tweets_df=spark.read.csv("/FileStore/tables/Tweets.csv", sep=',', escape='"', header=True, 
+               inferSchema=True, multiLine=True)
+tweets_df=tweets_df.select("tweet_id","airline_sentiment","text").toDF("id","sentiment","text")
+
+
+
+# COMMAND ----------
+
+tweets_df=tweets_df.na.drop(subset=["text"])
+
+display(tweets_df)
+
+# COMMAND ----------
+
+# Configure an ML pipeline, which consists of tree stages: tokenizer, hashingTF, and lr.
+
+max_iter=10
+
+
+tokenizer = Tokenizer(inputCol="text", outputCol="words")
+stopword_rm=StopWordsRemover(inputCol="words", outputCol="words_processed")
+hashingTF = HashingTF(inputCol="words_processed", outputCol="features")
+indexer = StringIndexer(inputCol="sentiment", outputCol="label")
+lr = LogisticRegression(maxIter=max_iter)
+
+pipeline = Pipeline(stages=[tokenizer, stopword_rm ,hashingTF, indexer,lr])
+
+
+
+# COMMAND ----------
+
+#tdf=pipeline.fit(tweets_df).transform(tweets_df)
+#display(tdf)
+
+# COMMAND ----------
+
+training, test = tweets_df.randomSplit([0.8, 0.2], seed=8462)
+
+
+paramGrid = ParamGridBuilder() \
+    .addGrid(hashingTF.numFeatures, [10, 100, 1000]) \
+    .addGrid(lr.regParam, [0.1, 0.01]) \
+    .build()
+
+
+crossval = CrossValidator(estimator=pipeline,
+                          estimatorParamMaps=paramGrid,
+                          evaluator=MulticlassClassificationEvaluator(),
+                          numFolds=10,
+                         parallelism=2)
+
+# Run cross-validation, and choose the best set of parameters.
+cvModel = crossval.fit(training)
+
+# COMMAND ----------
+
+predictions = cvModel.transform(test)
+
+predictionAndLabels = predictions.select("label","prediction").rdd
+
+# COMMAND ----------
+
+metrics = MulticlassMetrics(predictionAndLabels)
+
+print(metrics.confusionMatrix())
+print("Summary Stats")
+
+print("Accuracy = %s" % metrics.accuracy)
+
+labels = predictionAndLabels.map(lambda x: x[0]).distinct().collect()
+
+for label in sorted(labels):
+    print("Class %s precision = %s" % (label, metrics.precision(label)))
+    print("Class %s recall = %s" % (label, metrics.recall(label)))
+    print("Class %s F1 Measure = %s" % (label, metrics.fMeasure(label, beta=1.0)))
+
+# Weighted stats
+print("Weighted recall = %s" % metrics.weightedRecall)
+print("Weighted precision = %s" % metrics.weightedPrecision)
+print("Weighted F(1) Score = %s" % metrics.weightedFMeasure())
+print("Weighted F(0.5) Score = %s" % metrics.weightedFMeasure(beta=0.5))
+print("Weighted false positive rate = %s" % metrics.weightedFalsePositiveRate)
