@@ -1,4 +1,7 @@
 # Databricks notebook source
+#CS6307_Assingment 3
+#Team Members:Randy Suarez Rodes rxs179030 and Ping Chen pxc190026
+
 #Part 1
 
 #Packages
@@ -78,15 +81,11 @@ display(new_PR.orderBy(col("PR").desc()).take(10))
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.feature import HashingTF, Tokenizer
+from pyspark.ml.feature import HashingTF, Tokenizer, StopWordsRemover, StringIndexer
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
-from pyspark.ml.feature import StringIndexer
-from pyspark.ml.feature import StopWordsRemover
 
-from pyspark.mllib.classification import LogisticRegressionWithLBFGS
 from pyspark.mllib.util import MLUtils
 from pyspark.mllib.evaluation import MulticlassMetrics
-from pyspark.mllib.evaluation import MultilabelMetrics
 
 #Loading the data
 tweets_df=spark.read.csv("/FileStore/tables/Tweets.csv", sep=',', escape='"', header=True, 
@@ -124,8 +123,8 @@ training, test = tweets_df.randomSplit([0.8, 0.2], seed=rdseed)
 
 #Setting the parameters grid
 paramGrid = ParamGridBuilder() \
-    .addGrid(hashingTF.numFeatures, [10, 100, 1000]) \
-    .addGrid(lr.regParam, [0.1, 0.01]) \
+    .addGrid(hashingTF.numFeatures, [1,10, 100, 1000]) \
+    .addGrid(lr.regParam, [1,0.1, 0.01,0.001]) \
     .build()
 
 #Setting the cross validation process
