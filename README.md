@@ -1,4 +1,4 @@
-# CS6307Assingment3
+# CS6307Project3
 Repo for CS6307 Project 3 - Big Data Management and Analytics
 
 ## Part 1
