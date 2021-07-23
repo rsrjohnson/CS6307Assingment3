@@ -1,5 +1,5 @@
 # CS6307Assingment3
-Repo for CS6307 Assignment 3 - Big Data Management and Analytics
+Repo for CS6307 Project 3 - Big Data Management and Analytics
 
 ## Part 1
 Ranking airports using PageRank algorithm using data from https://transtats.bts.gov/. 
