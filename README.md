@@ -17,4 +17,4 @@ Tweet Processing and Classification using Pipelines applied to https://www.kaggl
 
 -Part 1 and Part 2 of the project are included in the same notebook (PySpark Notebook).
 
--For part 1 use load the data from 1067138468_T_T100D_SEGMENT_US_CARRIER_ONLY.csv, for part 2 load the data from Tweets.csv.
+-For part 1 load the data from 1067138468_T_T100D_SEGMENT_US_CARRIER_ONLY.csv, for part 2 load the data from Tweets.csv.
